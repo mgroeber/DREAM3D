@@ -32,13 +32,13 @@
 *    United States Prime Contract Navy N00173-07-C-2068
 *
 * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
 #pragma once
 
 #include "SIMPLib/Common/SIMPLibSetGetMacros.h"
 #include "SIMPLib/Filtering/AbstractFilter.h"
 #include "SIMPLib/Geometry/IGeometryGrid.h"
 #include "SIMPLib/SIMPLib.h"
+
 
 #include "SurfaceMeshing/SurfaceMeshingFilters/SurfaceMeshFilter.h"
 
@@ -195,6 +195,9 @@ private:
   DEFINE_DATAARRAY_VARIABLE(int32_t, FaceLabels)
   DEFINE_DATAARRAY_VARIABLE(int8_t, NodeTypes)
 
+  BoolArrayType::Pointer m_ProblemVoxelPtr;
+  bool* m_ProblemVoxel;
+
   std::vector<IDataArray::WeakPointer> m_SelectedWeakPtrVector;
   std::vector<IDataArray::WeakPointer> m_CreatedWeakPtrVector;
 
@@ -207,6 +210,10 @@ private:
    * @param coords
    */
   void getGridCoordinates(IGeometryGrid::Pointer grid, size_t x, size_t y, size_t z, float* coords);
+
+  void determineActiveNodes(std::vector<int64_t> m_NodeIds, int64_t nodeCount, int64_t triangleCount);
+  
+  void createNodesAndTriangles(std::vector<int64_t> m_NodeIds, int64_t nodeCount, int64_t triangleCount);
 
   /**
    * @brief updateFaceInstancePointers Updates raw Face pointers

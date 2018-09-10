@@ -107,6 +107,7 @@ QuickSurfaceMesh::QuickSurfaceMesh()
 , m_FaceLabelsArrayName(SIMPL::FaceData::SurfaceMeshFaceLabels)
 , m_NodeTypesArrayName(SIMPL::VertexData::SurfaceMeshNodeType)
 , m_FeatureAttributeMatrixName(SIMPL::Defaults::FaceFeatureAttributeMatrixName)
+, m_ProblemVoxel(nullptr)
 , m_FeatureIds(nullptr)
 , m_FaceLabels(nullptr)
 , m_NodeTypes(nullptr)
@@ -253,6 +254,9 @@ void QuickSurfaceMesh::dataCheck()
     dataArrayPaths.push_back(getFeatureIdsArrayPath());
   }
 
+  size_t numVoxels = m_FeatureIdsPtr.lock()->getNumberOfTuples();
+  m_ProblemVoxelPtr->resize(numVoxels);
+
   getDataContainerArray()->validateNumberOfTuples<AbstractFilter>(this, dataArrayPaths);
 
   QVector<DataArrayPath> paths = getSelectedDataArrayPaths();
@@ -371,29 +375,15 @@ void QuickSurfaceMesh::getGridCoordinates(IGeometryGrid::Pointer grid, size_t x,
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void QuickSurfaceMesh::execute()
+void QuickSurfaceMesh::determineActiveNodes(std::vector<int64_t> m_NodeIds, int64_t nodeCount, int64_t triangleCount)
 {
-  setErrorCondition(0);
-  setWarningCondition(0);
-  dataCheck();
-  if(getErrorCondition() < 0)
-  {
-    return;
-  }
-
   DataContainer::Pointer m = getDataContainerArray()->getDataContainer(m_FeatureIdsArrayPath.getDataContainerName());
-  DataContainer::Pointer sm = getDataContainerArray()->getDataContainer(getSurfaceDataContainerName());
 
-  AttributeMatrix::Pointer featAttrMat = sm->getAttributeMatrix(m_FeatureAttributeMatrixName);
-  size_t numFeatures = 0;
   size_t numTuples = m_FeatureIdsPtr.lock()->getNumberOfTuples();
   for(size_t i = 0; i < numTuples; i++)
   {
-    if(m_FeatureIds[i] > numFeatures) { numFeatures = m_FeatureIds[i]; }
+    m_ProblemVoxel[i] = false;
   }
-
-  QVector<size_t> featDims(1, numFeatures + 1);
-  featAttrMat->setTupleDimensions(featDims);
 
   IGeometryGrid::Pointer grid = m->getGeometryAs<IGeometryGrid>();
 
@@ -401,7 +391,9 @@ void QuickSurfaceMesh::execute()
   std::tie(udims[0], udims[1], udims[2]) = grid->getDimensions();
 
   int64_t dims[3] = {
-      static_cast<int64_t>(udims[0]), static_cast<int64_t>(udims[1]), static_cast<int64_t>(udims[2]),
+      static_cast<int64_t>(udims[0]),
+      static_cast<int64_t>(udims[1]),
+      static_cast<int64_t>(udims[2]),
   };
 
   int64_t xP = dims[0];
@@ -409,12 +401,6 @@ void QuickSurfaceMesh::execute()
   int64_t zP = dims[2];
 
   std::vector<std::set<int32_t>> ownerLists;
-
-  int64_t possibleNumNodes = (xP + 1) * (yP + 1) * (zP + 1);
-  std::vector<int64_t> m_NodeIds(possibleNumNodes, -1);
-
-  int64_t nodeCount = 0;
-  int64_t triangleCount = 0;
 
   int64_t point = 0, neigh1 = 0, neigh2 = 0, neigh3 = 0;
 
@@ -697,11 +683,52 @@ void QuickSurfaceMesh::execute()
       }
     }
   }
+}
 
-  // now create node and triangle arrays knowing the number that will be needed
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void QuickSurfaceMesh::createNodesAndTriangles(std::vector<int64_t> m_NodeIds, int64_t nodeCount, int64_t triangleCount)
+{
+  DataContainer::Pointer m = getDataContainerArray()->getDataContainer(m_FeatureIdsArrayPath.getDataContainerName());
+  DataContainer::Pointer sm = getDataContainerArray()->getDataContainer(getSurfaceDataContainerName());
+
+  AttributeMatrix::Pointer featAttrMat = sm->getAttributeMatrix(m_FeatureAttributeMatrixName);
+  size_t numFeatures = 0;
+  size_t numTuples = m_FeatureIdsPtr.lock()->getNumberOfTuples();
+  for(size_t i = 0; i < numTuples; i++)
+  {
+    if(m_FeatureIds[i] > numFeatures)
+    {
+      numFeatures = m_FeatureIds[i];
+    }
+  }
+
+  QVector<size_t> featDims(1, numFeatures + 1);
+  featAttrMat->setTupleDimensions(featDims);
+
+  IGeometryGrid::Pointer grid = m->getGeometryAs<IGeometryGrid>();
+
+  size_t udims[3] = {0, 0, 0};
+  std::tie(udims[0], udims[1], udims[2]) = grid->getDimensions();
+
+  int64_t dims[3] = {
+      static_cast<int64_t>(udims[0]),
+      static_cast<int64_t>(udims[1]),
+      static_cast<int64_t>(udims[2]),
+  };
+
+  int64_t xP = dims[0];
+  int64_t yP = dims[1];
+  int64_t zP = dims[2];
+
+  std::vector<std::set<int32_t>> ownerLists;
+
+  int64_t point = 0, neigh1 = 0, neigh2 = 0, neigh3 = 0;
+
+  int64_t nodeId1 = 0, nodeId2 = 0, nodeId3 = 0, nodeId4 = 0;
+
   TriangleGeom::Pointer triangleGeom = sm->getGeometryAs<TriangleGeom>();
-  triangleGeom->resizeTriList(triangleCount);
-  triangleGeom->resizeVertexList(nodeCount);
 
   float* vertex = triangleGeom->getVertexPointer(0);
   int64_t* triangle = triangleGeom->getTriPointer(0);
@@ -1204,6 +1231,57 @@ void QuickSurfaceMesh::execute()
       m_NodeTypes[i] += 10;
     }
   }
+
+  notifyStatusMessage(getHumanLabel(), "Complete");
+}
+
+// -----------------------------------------------------------------------------
+//
+// -----------------------------------------------------------------------------
+void QuickSurfaceMesh::execute()
+{
+  setErrorCondition(0);
+  setWarningCondition(0);
+  dataCheck();
+  if(getErrorCondition() < 0)
+  {
+    return;
+  }
+
+  DataContainer::Pointer m = getDataContainerArray()->getDataContainer(m_FeatureIdsArrayPath.getDataContainerName());
+  DataContainer::Pointer sm = getDataContainerArray()->getDataContainer(getSurfaceDataContainerName());
+
+  IGeometryGrid::Pointer grid = m->getGeometryAs<IGeometryGrid>();
+
+  size_t udims[3] = {0, 0, 0};
+  std::tie(udims[0], udims[1], udims[2]) = grid->getDimensions();
+
+  int64_t dims[3] = {
+      static_cast<int64_t>(udims[0]),
+      static_cast<int64_t>(udims[1]),
+      static_cast<int64_t>(udims[2]),
+  };
+
+  int64_t xP = dims[0];
+  int64_t yP = dims[1];
+  int64_t zP = dims[2];
+
+  std::vector<std::set<int32_t>> ownerLists;
+
+  int64_t possibleNumNodes = (xP + 1) * (yP + 1) * (zP + 1);
+  std::vector<int64_t> m_NodeIds(possibleNumNodes, -1);
+
+  int64_t nodeCount = 0;
+  int64_t triangleCount = 0;
+
+  determineActiveNodes(m_NodeIds, nodeCount, triangleCount);
+
+  // now create node and triangle arrays knowing the number that will be needed
+  TriangleGeom::Pointer triangleGeom = sm->getGeometryAs<TriangleGeom>();
+  triangleGeom->resizeTriList(triangleCount);
+  triangleGeom->resizeVertexList(nodeCount);
+
+  createNodesAndTriangles(m_NodeIds, nodeCount, triangleCount);
 
   notifyStatusMessage(getHumanLabel(), "Complete");
 }
