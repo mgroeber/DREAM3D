@@ -105,7 +105,7 @@ public:
     GeometryMath::FindDistanceBetweenPoints(ll, ur, radius);
     int64_t pointsVisited = 0;
     // check points in vertex array to see if they are in the bounding box of the feature
-    for(int64_t i = start; i < end; i++)
+    for(int64_t i = static_cast<int64_t>(start); i < static_cast<int64_t>(end); i++)
     {
       // Check for the filter being cancelled.
       if(m_Filter->getCancel())
@@ -114,7 +114,7 @@ public:
       }
 
       point = m_Points->getVertexPointer(i);
-      if(m_PolyIds[i] == 0 && GeometryMath::PointInBox(point, ll, ur) == true)
+      if(m_PolyIds[i] == 0 && GeometryMath::PointInBox(point, ll, ur))
       {
         code = GeometryMath::PointInPolyhedron(m_Faces.get(), m_FaceIds->getElementList(iter), m_FaceBBs.get(), point, ll, ur, radius, distToBoundary);
         if(code == 'i' || code == 'V' || code == 'E' || code == 'F')
@@ -192,7 +192,7 @@ public:
         }
 
         point = m_Points->getVertexPointer(i);
-        if(m_PolyIds[i] == 0 && GeometryMath::PointInBox(point, ll, ur) == true)
+        if(m_PolyIds[i] == 0 && GeometryMath::PointInBox(point, ll, ur))
         {
           code = GeometryMath::PointInPolyhedron(m_Faces.get(), m_FaceIds->getElementList(iter), m_FaceBBs.get(), point, ll, ur, radius, distToBoundary);
           if(code == 'i' || code == 'V' || code == 'E' || code == 'F')
@@ -317,7 +317,6 @@ VertexGeom::Pointer SampleSurfaceMesh::generate_points()
 // -----------------------------------------------------------------------------
 void SampleSurfaceMesh::assign_points(Int32ArrayType::Pointer iArray)
 {
-  return;
 }
 
 // -----------------------------------------------------------------------------
@@ -462,13 +461,13 @@ void SampleSurfaceMesh::execute()
 #endif
 
   // C++11 RIGHT HERE....
-  unsigned int nthreads = std::thread::hardware_concurrency();
-  // If the number of featurs is larger than the number of cores to do the work then parallelize over the number of features
+  int32_t nthreads = static_cast<int32_t>(std::thread::hardware_concurrency()); // Returns ZERO if not defined on this platform
+  // If the number of features is larger than the number of cores to do the work then parallelize over the number of features
   // otherwise parallelize over the number of triangle points.
   if(numFeatures > nthreads)
   {
 #ifdef SIMPL_USE_PARALLEL_ALGORITHMS
-    if(doParallel == true)
+    if(doParallel)
     {
       tbb::parallel_for(tbb::blocked_range<size_t>(0, numFeatures), SampleSurfaceMeshImpl(this, triangleGeom, faceLists, faceBBs, points, polyIds), tbb::auto_partitioner());
     }
@@ -488,7 +487,7 @@ void SampleSurfaceMesh::execute()
       m_Millis = m_StartMillis;
       size_t numPoints = points->getNumberOfVertices();
 #ifdef SIMPL_USE_PARALLEL_ALGORITHMS
-      if(doParallel == true)
+      if(doParallel)
       {
         tbb::parallel_for(tbb::blocked_range<size_t>(0, numPoints), SampleSurfaceMeshImplByPoints(this, triangleGeom, faceLists, faceBBs, points, featureId, polyIds), tbb::auto_partitioner());
       }
@@ -532,7 +531,7 @@ void SampleSurfaceMesh::sendThreadSafeProgressMessage(int featureId, size_t numC
 AbstractFilter::Pointer SampleSurfaceMesh::newFilterInstance(bool copyFilterParameters) const
 {
   SampleSurfaceMesh::Pointer filter = SampleSurfaceMesh::New();
-  if(true == copyFilterParameters)
+  if(copyFilterParameters)
   {
     copyFilterParameterInstanceVariables(filter.get());
   }
