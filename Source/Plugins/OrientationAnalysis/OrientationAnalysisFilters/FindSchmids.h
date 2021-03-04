@@ -56,9 +56,9 @@ class OrientationAnalysis_EXPORT FindSchmids : public AbstractFilter
   PYB11_FILTER()
   PYB11_SHARED_POINTERS(FindSchmids)
   PYB11_FILTER_NEW_MACRO(FindSchmids)
-  PYB11_PROPERTY(DataArrayPath FeaturePhasesArrayPath READ getFeaturePhasesArrayPath WRITE setFeaturePhasesArrayPath)
+  PYB11_PROPERTY(DataArrayPath PhasesArrayPath READ getPhasesArrayPath WRITE setPhasesArrayPath)
   PYB11_PROPERTY(DataArrayPath CrystalStructuresArrayPath READ getCrystalStructuresArrayPath WRITE setCrystalStructuresArrayPath)
-  PYB11_PROPERTY(DataArrayPath AvgQuatsArrayPath READ getAvgQuatsArrayPath WRITE setAvgQuatsArrayPath)
+  PYB11_PROPERTY(DataArrayPath QuatsArrayPath READ getQuatsArrayPath WRITE setQuatsArrayPath)
   PYB11_PROPERTY(QString SchmidsArrayName READ getSchmidsArrayName WRITE setSchmidsArrayName)
   PYB11_PROPERTY(QString SlipSystemsArrayName READ getSlipSystemsArrayName WRITE setSlipSystemsArrayName)
   PYB11_PROPERTY(QString PolesArrayName READ getPolesArrayName WRITE setPolesArrayName)
@@ -103,15 +103,15 @@ public:
   ~FindSchmids() override;
 
   /**
-   * @brief Setter property for FeaturePhasesArrayPath
+   * @brief Setter property for PhasesArrayPath
    */
-  void setFeaturePhasesArrayPath(const DataArrayPath& value);
+  void setPhasesArrayPath(const DataArrayPath& value);
   /**
-   * @brief Getter property for FeaturePhasesArrayPath
-   * @return Value of FeaturePhasesArrayPath
+   * @brief Getter property for PhasesArrayPath
+   * @return Value of PhasesArrayPath
    */
-  DataArrayPath getFeaturePhasesArrayPath() const;
-  Q_PROPERTY(DataArrayPath FeaturePhasesArrayPath READ getFeaturePhasesArrayPath WRITE setFeaturePhasesArrayPath)
+  DataArrayPath getPhasesArrayPath() const;
+  Q_PROPERTY(DataArrayPath PhasesArrayPath READ getPhasesArrayPath WRITE setPhasesArrayPath)
 
   /**
    * @brief Setter property for CrystalStructuresArrayPath
@@ -125,15 +125,15 @@ public:
   Q_PROPERTY(DataArrayPath CrystalStructuresArrayPath READ getCrystalStructuresArrayPath WRITE setCrystalStructuresArrayPath)
 
   /**
-   * @brief Setter property for AvgQuatsArrayPath
+   * @brief Setter property for QuatsArrayPath
    */
-  void setAvgQuatsArrayPath(const DataArrayPath& value);
+  void setQuatsArrayPath(const DataArrayPath& value);
   /**
-   * @brief Getter property for AvgQuatsArrayPath
-   * @return Value of AvgQuatsArrayPath
+   * @brief Getter property for QuatsArrayPath
+   * @return Value of QuatsArrayPath
    */
-  DataArrayPath getAvgQuatsArrayPath() const;
-  Q_PROPERTY(DataArrayPath AvgQuatsArrayPath READ getAvgQuatsArrayPath WRITE setAvgQuatsArrayPath)
+  DataArrayPath getQuatsArrayPath() const;
+  Q_PROPERTY(DataArrayPath QuatsArrayPath READ getQuatsArrayPath WRITE setQuatsArrayPath)
 
   /**
    * @brief Setter property for SchmidsArrayName
@@ -318,10 +318,10 @@ protected:
   void initialize();
 
 private:
-  std::weak_ptr<DataArray<int32_t>> m_FeaturePhasesPtr;
-  int32_t* m_FeaturePhases = nullptr;
-  std::weak_ptr<DataArray<float>> m_AvgQuatsPtr;
-  float* m_AvgQuats = nullptr;
+  std::weak_ptr<DataArray<int32_t>> m_PhasesPtr;
+  int32_t* m_Phases = nullptr;
+  std::weak_ptr<DataArray<float>> m_QuatsPtr;
+  float* m_Quats = nullptr;
   std::weak_ptr<DataArray<unsigned int>> m_CrystalStructuresPtr;
   unsigned int* m_CrystalStructures = nullptr;
   std::weak_ptr<DataArray<float>> m_SchmidsPtr;
@@ -335,9 +335,9 @@ private:
   std::weak_ptr<DataArray<int32_t>> m_SlipSystemsPtr;
   int32_t* m_SlipSystems = nullptr;
 
-  DataArrayPath m_FeaturePhasesArrayPath = {"", "", ""};
+  DataArrayPath m_PhasesArrayPath = {"", "", ""};
   DataArrayPath m_CrystalStructuresArrayPath = {"", "", ""};
-  DataArrayPath m_AvgQuatsArrayPath = {"", "", ""};
+  DataArrayPath m_QuatsArrayPath = {"", "", ""};
   QString m_SchmidsArrayName = {SIMPL::FeatureData::Schmids};
   QString m_SlipSystemsArrayName = {SIMPL::FeatureData::SlipSystems};
   QString m_PolesArrayName = {SIMPL::FeatureData::Poles};

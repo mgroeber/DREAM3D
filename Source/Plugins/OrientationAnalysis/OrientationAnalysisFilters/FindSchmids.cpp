@@ -111,26 +111,26 @@ void FindSchmids::setupFilterParameters()
 
   parameters.push_back(SIMPL_NEW_FLOAT_VEC3_FP("Slip Direction", SlipDirection, FilterParameter::Category::Parameter, FindSchmids));
 
-  parameters.push_back(SeparatorFilterParameter::Create("Feature Data", FilterParameter::Category::RequiredArray));
+  parameters.push_back(SeparatorFilterParameter::Create("Data", FilterParameter::Category::RequiredArray));
   {
-    DataArraySelectionFilterParameter::RequirementType req = DataArraySelectionFilterParameter::CreateCategoryRequirement(SIMPL::TypeNames::Int32, 1, AttributeMatrix::Category::Feature);
-    parameters.push_back(SIMPL_NEW_DA_SELECTION_FP("Phases", FeaturePhasesArrayPath, FilterParameter::Category::RequiredArray, FindSchmids, req));
+    DataArraySelectionFilterParameter::RequirementType req = DataArraySelectionFilterParameter::CreateCategoryRequirement(SIMPL::TypeNames::Int32, 1, AttributeMatrix::Category::Any);
+    parameters.push_back(SIMPL_NEW_DA_SELECTION_FP("Phases", PhasesArrayPath, FilterParameter::Category::RequiredArray, FindSchmids, req));
   }
   {
-    DataArraySelectionFilterParameter::RequirementType req = DataArraySelectionFilterParameter::CreateCategoryRequirement(SIMPL::TypeNames::Float, 4, AttributeMatrix::Category::Feature);
-    parameters.push_back(SIMPL_NEW_DA_SELECTION_FP("Average Quaternions", AvgQuatsArrayPath, FilterParameter::Category::RequiredArray, FindSchmids, req));
+    DataArraySelectionFilterParameter::RequirementType req = DataArraySelectionFilterParameter::CreateCategoryRequirement(SIMPL::TypeNames::Float, 4, AttributeMatrix::Category::Any);
+    parameters.push_back(SIMPL_NEW_DA_SELECTION_FP("Quaternions", QuatsArrayPath, FilterParameter::Category::RequiredArray, FindSchmids, req));
   }
   parameters.push_back(SeparatorFilterParameter::Create("Ensemble Data", FilterParameter::Category::RequiredArray));
   {
     DataArraySelectionFilterParameter::RequirementType req = DataArraySelectionFilterParameter::CreateCategoryRequirement(SIMPL::TypeNames::UInt32, 1, AttributeMatrix::Category::Ensemble);
     parameters.push_back(SIMPL_NEW_DA_SELECTION_FP("Crystal Structures", CrystalStructuresArrayPath, FilterParameter::Category::RequiredArray, FindSchmids, req));
   }
-  parameters.push_back(SeparatorFilterParameter::Create("Feature Data", FilterParameter::Category::CreatedArray));
-  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Schmids", SchmidsArrayName, FeaturePhasesArrayPath, FeaturePhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
-  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Slip Systems", SlipSystemsArrayName, FeaturePhasesArrayPath, FeaturePhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
-  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Poles", PolesArrayName, FeaturePhasesArrayPath, FeaturePhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
-  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Phis", PhisArrayName, FeaturePhasesArrayPath, FeaturePhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
-  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Lambdas", LambdasArrayName, FeaturePhasesArrayPath, FeaturePhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
+  parameters.push_back(SeparatorFilterParameter::Create("Data", FilterParameter::Category::CreatedArray));
+  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Schmids", SchmidsArrayName, PhasesArrayPath, PhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
+  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Slip Systems", SlipSystemsArrayName, PhasesArrayPath, PhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
+  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Poles", PolesArrayName, PhasesArrayPath, PhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
+  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Phis", PhisArrayName, PhasesArrayPath, PhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
+  parameters.push_back(SIMPL_NEW_DA_WITH_LINKED_AM_FP("Lambdas", LambdasArrayName, PhasesArrayPath, PhasesArrayPath, FilterParameter::Category::CreatedArray, FindSchmids));
   setFilterParameters(parameters);
 }
 
@@ -145,9 +145,9 @@ void FindSchmids::readFilterParameters(AbstractFilterParametersReader* reader, i
   setPolesArrayName(reader->readString("PolesArrayName", getPolesArrayName()));
   setSlipSystemsArrayName(reader->readString("SlipSystemsArrayName", getSlipSystemsArrayName()));
   setSchmidsArrayName(reader->readString("SchmidsArrayName", getSchmidsArrayName()));
-  setAvgQuatsArrayPath(reader->readDataArrayPath("AvgQuatsArrayPath", getAvgQuatsArrayPath()));
+  setQuatsArrayPath(reader->readDataArrayPath("QuatsArrayPath", getQuatsArrayPath()));
   setCrystalStructuresArrayPath(reader->readDataArrayPath("CrystalStructuresArrayPath", getCrystalStructuresArrayPath()));
-  setFeaturePhasesArrayPath(reader->readDataArrayPath("FeaturePhasesArrayPath", getFeaturePhasesArrayPath()));
+  setPhasesArrayPath(reader->readDataArrayPath("PhasesArrayPath", getPhasesArrayPath()));
   setLoadingDirection(reader->readFloatVec3("LoadingDirection", getLoadingDirection()));
   setStoreAngleComponents(reader->readValue("StoreAngleComponents", getStoreAngleComponents()));
   setOverrideSystem(reader->readValue("OverrideSystem", getOverrideSystem()));
@@ -176,24 +176,24 @@ void FindSchmids::dataCheck()
 
   QVector<DataArrayPath> dataArrayPaths;
 
-  tempPath.update(getFeaturePhasesArrayPath().getDataContainerName(), getFeaturePhasesArrayPath().getAttributeMatrixName(), getSchmidsArrayName());
+  tempPath.update(getPhasesArrayPath().getDataContainerName(), getPhasesArrayPath().getAttributeMatrixName(), getSchmidsArrayName());
   m_SchmidsPtr = getDataContainerArray()->createNonPrereqArrayFromPath<DataArray<float>>(this, tempPath, 0, cDims, "", DataArrayID31);
   if(nullptr != m_SchmidsPtr.lock())
   {
     m_Schmids = m_SchmidsPtr.lock()->getPointer(0);
   } /* Now assign the raw pointer to data from the DataArray<T> object */
 
-  m_FeaturePhasesPtr = getDataContainerArray()->getPrereqArrayFromPath<DataArray<int32_t>>(this, getFeaturePhasesArrayPath(), cDims);
-  if(nullptr != m_FeaturePhasesPtr.lock())
+  m_PhasesPtr = getDataContainerArray()->getPrereqArrayFromPath<DataArray<int32_t>>(this, getPhasesArrayPath(), cDims);
+  if(nullptr != m_PhasesPtr.lock())
   {
-    m_FeaturePhases = m_FeaturePhasesPtr.lock()->getPointer(0);
+    m_Phases = m_PhasesPtr.lock()->getPointer(0);
   } /* Now assign the raw pointer to data from the DataArray<T> object */
   if(getErrorCode() >= 0)
   {
-    dataArrayPaths.push_back(getFeaturePhasesArrayPath());
+    dataArrayPaths.push_back(getPhasesArrayPath());
   }
 
-  tempPath.update(getFeaturePhasesArrayPath().getDataContainerName(), getFeaturePhasesArrayPath().getAttributeMatrixName(), getSlipSystemsArrayName());
+  tempPath.update(getPhasesArrayPath().getDataContainerName(), getPhasesArrayPath().getAttributeMatrixName(), getSlipSystemsArrayName());
   m_SlipSystemsPtr = getDataContainerArray()->createNonPrereqArrayFromPath<DataArray<int32_t>>(this, tempPath, 0, cDims);
   if(nullptr != m_SlipSystemsPtr.lock())
   {
@@ -207,7 +207,7 @@ void FindSchmids::dataCheck()
   } /* Now assign the raw pointer to data from the DataArray<T> object */
 
   cDims[0] = 3;
-  tempPath.update(getFeaturePhasesArrayPath().getDataContainerName(), getFeaturePhasesArrayPath().getAttributeMatrixName(), getPolesArrayName());
+  tempPath.update(getPhasesArrayPath().getDataContainerName(), getPhasesArrayPath().getAttributeMatrixName(), getPolesArrayName());
   m_PolesPtr = getDataContainerArray()->createNonPrereqArrayFromPath<DataArray<int32_t>>(this, tempPath, 0, cDims, "", DataArrayID32);
   if(nullptr != m_PolesPtr.lock())
   {
@@ -215,27 +215,27 @@ void FindSchmids::dataCheck()
   } /* Now assign the raw pointer to data from the DataArray<T> object */
 
   cDims[0] = 4;
-  m_AvgQuatsPtr = getDataContainerArray()->getPrereqArrayFromPath<DataArray<float>>(this, getAvgQuatsArrayPath(), cDims);
-  if(nullptr != m_AvgQuatsPtr.lock())
+  m_QuatsPtr = getDataContainerArray()->getPrereqArrayFromPath<DataArray<float>>(this, getQuatsArrayPath(), cDims);
+  if(nullptr != m_QuatsPtr.lock())
   {
-    m_AvgQuats = m_AvgQuatsPtr.lock()->getPointer(0);
+    m_Quats = m_QuatsPtr.lock()->getPointer(0);
   } /* Now assign the raw pointer to data from the DataArray<T> object */
   if(getErrorCode() >= 0)
   {
-    dataArrayPaths.push_back(getAvgQuatsArrayPath());
+    dataArrayPaths.push_back(getQuatsArrayPath());
   }
 
   if(m_StoreAngleComponents)
   {
     cDims[0] = 1;
-    tempPath.update(getFeaturePhasesArrayPath().getDataContainerName(), getFeaturePhasesArrayPath().getAttributeMatrixName(), getPhisArrayName());
+    tempPath.update(getPhasesArrayPath().getDataContainerName(), getPhasesArrayPath().getAttributeMatrixName(), getPhisArrayName());
     m_PhisPtr = getDataContainerArray()->createNonPrereqArrayFromPath<DataArray<float>>(this, tempPath, -301, cDims, "", DataArrayID33);
     if(nullptr != m_PhisPtr.lock())
     {
       m_Phis = m_PhisPtr.lock()->getPointer(0);
     } /* Now assign the raw pointer to data from the DataArray<T> object */
 
-    tempPath.update(getFeaturePhasesArrayPath().getDataContainerName(), getFeaturePhasesArrayPath().getAttributeMatrixName(), getLambdasArrayName());
+    tempPath.update(getPhasesArrayPath().getDataContainerName(), getPhasesArrayPath().getAttributeMatrixName(), getLambdasArrayName());
     m_LambdasPtr = getDataContainerArray()->createNonPrereqArrayFromPath<DataArray<float>>(this, tempPath, -301, cDims, "", DataArrayID34);
     if(nullptr != m_LambdasPtr.lock())
     {
@@ -268,11 +268,11 @@ void FindSchmids::execute()
   }
   std::vector<LaueOps::Pointer> orientationOps = LaueOps::GetAllOrientationOps();
 
-  size_t totalFeatures = m_SchmidsPtr.lock()->getNumberOfTuples();
+  size_t totalObjects = m_SchmidsPtr.lock()->getNumberOfTuples();
 
   int32_t ss = 0;
   // QuatF* avgQuats = reinterpret_cast<QuatF*>(m_AvgQuats);
-  FloatArrayType::Pointer avgQuatPtr = m_AvgQuatsPtr.lock();
+  FloatArrayType::Pointer QuatPtr = m_QuatsPtr.lock();
 
   double g[3][3] = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
   double sampleLoading[3] = {0.0f, 0.0f, 0.0f};
@@ -299,16 +299,16 @@ void FindSchmids::execute()
     direction[2] = m_SlipDirection[2];
     MatrixMath::Normalize3x1(direction);
   }
-  float* currentAvgQuatPtr = nullptr;
+  float* currentQuatPtr = nullptr;
 
-  for(size_t i = 1; i < totalFeatures; i++)
+  for(size_t i = 1; i < totalObjects; i++)
   {
-    currentAvgQuatPtr = avgQuatPtr->getTuplePointer(i);
-    OrientationTransformation::qu2om<QuatF, OrientationD>({currentAvgQuatPtr[0], currentAvgQuatPtr[1], currentAvgQuatPtr[2], currentAvgQuatPtr[3]}).toGMatrix(g);
+    currentQuatPtr = QuatPtr->getTuplePointer(i);
+    OrientationTransformation::qu2om<QuatF, OrientationD>({currentQuatPtr[0], currentQuatPtr[1], currentQuatPtr[2], currentQuatPtr[3]}).toGMatrix(g);
 
     MatrixMath::Multiply3x3with3x1(g, sampleLoading, crystalLoading);
 
-    uint32_t xtal = m_CrystalStructures[m_FeaturePhases[i]];
+    uint32_t xtal = m_CrystalStructures[m_Phases[i]];
     if(xtal < EbsdLib::CrystalStructure::LaueGroupEnd)
     {
       if(!m_OverrideSystem)
@@ -435,15 +435,15 @@ QString FindSchmids::ClassName()
 }
 
 // -----------------------------------------------------------------------------
-void FindSchmids::setFeaturePhasesArrayPath(const DataArrayPath& value)
+void FindSchmids::setPhasesArrayPath(const DataArrayPath& value)
 {
-  m_FeaturePhasesArrayPath = value;
+  m_PhasesArrayPath = value;
 }
 
 // -----------------------------------------------------------------------------
-DataArrayPath FindSchmids::getFeaturePhasesArrayPath() const
+DataArrayPath FindSchmids::getPhasesArrayPath() const
 {
-  return m_FeaturePhasesArrayPath;
+  return m_PhasesArrayPath;
 }
 
 // -----------------------------------------------------------------------------
@@ -459,15 +459,15 @@ DataArrayPath FindSchmids::getCrystalStructuresArrayPath() const
 }
 
 // -----------------------------------------------------------------------------
-void FindSchmids::setAvgQuatsArrayPath(const DataArrayPath& value)
+void FindSchmids::setQuatsArrayPath(const DataArrayPath& value)
 {
-  m_AvgQuatsArrayPath = value;
+  m_QuatsArrayPath = value;
 }
 
 // -----------------------------------------------------------------------------
-DataArrayPath FindSchmids::getAvgQuatsArrayPath() const
+DataArrayPath FindSchmids::getQuatsArrayPath() const
 {
-  return m_AvgQuatsArrayPath;
+  return m_QuatsArrayPath;
 }
 
 // -----------------------------------------------------------------------------
