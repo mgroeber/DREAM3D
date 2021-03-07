@@ -301,7 +301,7 @@ void FindSchmids::execute()
   }
   float* currentQuatPtr = nullptr;
 
-  for(size_t i = 1; i < totalObjects; i++)
+  for(size_t i = 0; i < totalObjects; i++)
   {
     currentQuatPtr = QuatPtr->getTuplePointer(i);
     OrientationTransformation::qu2om<QuatF, OrientationD>({currentQuatPtr[0], currentQuatPtr[1], currentQuatPtr[2], currentQuatPtr[3]}).toGMatrix(g);

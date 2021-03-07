@@ -39,35 +39,39 @@
 
 #include "SIMPLib/SIMPLib.h"
 #include "SIMPLib/DataArrays/DataArray.hpp"
-#include "SIMPLib/FilterParameters/IntVec3FilterParameter.h"
+#include "SIMPLib/DataArrays/NeighborList.hpp"
 #include "SIMPLib/Filtering/AbstractFilter.h"
 
 #include "OrientationAnalysis/OrientationAnalysisDLLExport.h"
 
+class LaueOps;
+using LaueOpsShPtrType = std::shared_ptr<LaueOps>;
+using LaueOpsContainer = std::vector<LaueOpsShPtrType>;
+
 /**
- * @brief The FindKernelAvgMisorientations class. See [Filter documentation](@ref findkernelavgmisorientations) for details.
+ * @brief The FindLocalSlipTransmissionMetrics class. See [Filter documentation](@ref FindLocalSliptransmissionmetrics) for details.
  */
-class OrientationAnalysis_EXPORT FindKernelAvgMisorientations : public AbstractFilter
+class OrientationAnalysis_EXPORT FindLocalSlipTransmissionMetrics : public AbstractFilter
 {
   Q_OBJECT
 
   // Start Python bindings declarations
-  PYB11_BEGIN_BINDINGS(FindKernelAvgMisorientations SUPERCLASS AbstractFilter)
+  PYB11_BEGIN_BINDINGS(FindLocalSlipTransmissionMetrics SUPERCLASS AbstractFilter)
   PYB11_FILTER()
-  PYB11_SHARED_POINTERS(FindKernelAvgMisorientations)
-  PYB11_FILTER_NEW_MACRO(FindKernelAvgMisorientations)
-  PYB11_PROPERTY(DataArrayPath FeatureIdsArrayPath READ getFeatureIdsArrayPath WRITE setFeatureIdsArrayPath)
-  PYB11_PROPERTY(DataArrayPath CellPhasesArrayPath READ getCellPhasesArrayPath WRITE setCellPhasesArrayPath)
-  PYB11_PROPERTY(DataArrayPath CrystalStructuresArrayPath READ getCrystalStructuresArrayPath WRITE setCrystalStructuresArrayPath)
+  PYB11_SHARED_POINTERS(FindLocalSlipTransmissionMetrics)
+  PYB11_FILTER_NEW_MACRO(FindLocalSlipTransmissionMetrics)
+  PYB11_PROPERTY(QString F1ListArrayName READ getF1ListArrayName WRITE setF1ListArrayName)
+  PYB11_PROPERTY(QString F1sptListArrayName READ getF1sptListArrayName WRITE setF1sptListArrayName)
+  PYB11_PROPERTY(QString F7ListArrayName READ getF7ListArrayName WRITE setF7ListArrayName)
+  PYB11_PROPERTY(QString mPrimeListArrayName READ getmPrimeListArrayName WRITE setmPrimeListArrayName)
   PYB11_PROPERTY(DataArrayPath QuatsArrayPath READ getQuatsArrayPath WRITE setQuatsArrayPath)
-  PYB11_PROPERTY(QString KernelAverageMisorientationsArrayName READ getKernelAverageMisorientationsArrayName WRITE setKernelAverageMisorientationsArrayName)
-  PYB11_PROPERTY(bool IgnoreFeatureBoundaries READ getIgnoreFeatureBoundaries WRITE setIgnoreFeatureBoundaries)
-  PYB11_PROPERTY(IntVec3Type KernelSize READ getKernelSize WRITE setKernelSize)
+  PYB11_PROPERTY(DataArrayPath PhasesArrayPath READ getPhasesArrayPath WRITE setPhasesArrayPath)
+  PYB11_PROPERTY(DataArrayPath CrystalStructuresArrayPath READ getCrystalStructuresArrayPath WRITE setCrystalStructuresArrayPath)
   PYB11_END_BINDINGS()
   // End Python bindings declarations
 
 public:
-  using Self = FindKernelAvgMisorientations;
+  using Self = FindLocalSlipTransmissionMetrics;
   using Pointer = std::shared_ptr<Self>;
   using ConstPointer = std::shared_ptr<const Self>;
   using WeakPointer = std::weak_ptr<Self>;
@@ -86,48 +90,60 @@ public:
   static Pointer New();
 
   /**
-   * @brief Returns the name of the class for FindKernelAvgMisorientations
+   * @brief Returns the name of the class for FindLocalSlipTransmissionMetrics
    */
   QString getNameOfClass() const override;
   /**
-   * @brief Returns the name of the class for FindKernelAvgMisorientations
+   * @brief Returns the name of the class for FindLocalSlipTransmissionMetrics
    */
   static QString ClassName();
 
-  ~FindKernelAvgMisorientations() override;
+  ~FindLocalSlipTransmissionMetrics() override;
+
 
   /**
-   * @brief Setter property for FeatureIdsArrayPath
+   * @brief Setter property for F1ListArrayName
    */
-  void setFeatureIdsArrayPath(const DataArrayPath& value);
+  void setF1ArrayName(const QString& value);
   /**
-   * @brief Getter property for FeatureIdsArrayPath
-   * @return Value of FeatureIdsArrayPath
+   * @brief Getter property for F1ListArrayName
+   * @return Value of F1ListArrayName
    */
-  DataArrayPath getFeatureIdsArrayPath() const;
-  Q_PROPERTY(DataArrayPath FeatureIdsArrayPath READ getFeatureIdsArrayPath WRITE setFeatureIdsArrayPath)
+  QString getF1ArrayName() const;
+  Q_PROPERTY(QString F1ArrayName READ getF1ArrayName WRITE setF1ArrayName)
 
   /**
-   * @brief Setter property for CellPhasesArrayPath
+   * @brief Setter property for F1sptListArrayName
    */
-  void setCellPhasesArrayPath(const DataArrayPath& value);
+  void setF1sptArrayName(const QString& value);
   /**
-   * @brief Getter property for CellPhasesArrayPath
-   * @return Value of CellPhasesArrayPath
+   * @brief Getter property for F1sptListArrayName
+   * @return Value of F1sptListArrayName
    */
-  DataArrayPath getCellPhasesArrayPath() const;
-  Q_PROPERTY(DataArrayPath CellPhasesArrayPath READ getCellPhasesArrayPath WRITE setCellPhasesArrayPath)
+  QString getF1sptArrayName() const;
+  Q_PROPERTY(QString F1sptArrayName READ getF1sptArrayName WRITE setF1sptArrayName)
 
   /**
-   * @brief Setter property for CrystalStructuresArrayPath
+   * @brief Setter property for F7ListArrayName
    */
-  void setCrystalStructuresArrayPath(const DataArrayPath& value);
+  void setF7ArrayName(const QString& value);
   /**
-   * @brief Getter property for CrystalStructuresArrayPath
-   * @return Value of CrystalStructuresArrayPath
+   * @brief Getter property for F7ListArrayName
+   * @return Value of F7ListArrayName
    */
-  DataArrayPath getCrystalStructuresArrayPath() const;
-  Q_PROPERTY(DataArrayPath CrystalStructuresArrayPath READ getCrystalStructuresArrayPath WRITE setCrystalStructuresArrayPath)
+  QString getF7ArrayName() const;
+  Q_PROPERTY(QString F7ArrayName READ getF7ArrayName WRITE setF7ArrayName)
+
+  /**
+   * @brief Setter property for mPrimeListArrayName
+   */
+  void setmPrimeArrayName(const QString& value);
+  /**
+   * @brief Getter property for mPrimeListArrayName
+   * @return Value of mPrimeListArrayName
+   */
+  QString getmPrimeArrayName() const;
+  Q_PROPERTY(QString mPrimeArrayName READ getmPrimeArrayName WRITE setmPrimeArrayName)
 
   /**
    * @brief Setter property for QuatsArrayPath
@@ -141,38 +157,26 @@ public:
   Q_PROPERTY(DataArrayPath QuatsArrayPath READ getQuatsArrayPath WRITE setQuatsArrayPath)
 
   /**
-   * @brief Setter property for KernelAverageMisorientationsArrayName
+   * @brief Setter property for PhasesArrayPath
    */
-  void setKernelAverageMisorientationsArrayName(const QString& value);
+  void setPhasesArrayPath(const DataArrayPath& value);
   /**
-   * @brief Getter property for KernelAverageMisorientationsArrayName
-   * @return Value of KernelAverageMisorientationsArrayName
+   * @brief Getter property for PhasesArrayPath
+   * @return Value of PhasesArrayPath
    */
-  QString getKernelAverageMisorientationsArrayName() const;
-  Q_PROPERTY(QString KernelAverageMisorientationsArrayName READ getKernelAverageMisorientationsArrayName WRITE setKernelAverageMisorientationsArrayName)
+  DataArrayPath getPhasesArrayPath() const;
+  Q_PROPERTY(DataArrayPath PhasesArrayPath READ getPhasesArrayPath WRITE setPhasesArrayPath)
 
   /**
-   * @brief Setter property for IgnoreFeatureBoundaries
+   * @brief Setter property for CrystalStructuresArrayPath
    */
-  void setIgnoreFeatureBoundaries(bool value);
+  void setCrystalStructuresArrayPath(const DataArrayPath& value);
   /**
-   * @brief Getter property for IgnoreFeatureBoundaries
-   * @return Value of IgnoreFeatureBoundaries
+   * @brief Getter property for CrystalStructuresArrayPath
+   * @return Value of CrystalStructuresArrayPath
    */
-  bool getIgnoreFeatureBoundaries() const;
-
-  Q_PROPERTY(bool IgnoreFeatureBoundaries READ getIgnoreFeatureBoundaries WRITE setIgnoreFeatureBoundaries)
-
-  /**
-   * @brief Setter property for KernelSize
-   */
-  void setKernelSize(const IntVec3Type& value);
-  /**
-   * @brief Getter property for KernelSize
-   * @return Value of KernelSize
-   */
-  IntVec3Type getKernelSize() const;
-  Q_PROPERTY(IntVec3Type KernelSize READ getKernelSize WRITE setKernelSize)
+  DataArrayPath getCrystalStructuresArrayPath() const;
+  Q_PROPERTY(DataArrayPath CrystalStructuresArrayPath READ getCrystalStructuresArrayPath WRITE setCrystalStructuresArrayPath)
 
   /**
    * @brief getCompiledLibraryName Reimplemented from @see AbstractFilter class
@@ -235,7 +239,7 @@ public:
   void execute() override;
 
 protected:
-  FindKernelAvgMisorientations();
+  FindLocalSlipTransmissionMetrics();
   /**
    * @brief dataCheck Checks for the appropriate parameter values and availability of arrays
    */
@@ -247,28 +251,34 @@ protected:
   void initialize();
 
 private:
-  std::weak_ptr<DataArray<int32_t>> m_FeatureIdsPtr;
-  int32_t* m_FeatureIds = nullptr;
-  std::weak_ptr<DataArray<int32_t>> m_CellPhasesPtr;
-  int32_t* m_CellPhases = nullptr;
+  std::weak_ptr<DataArray<int32_t>> m_PhasesPtr;
+  int32_t* m_Phases = nullptr;
   std::weak_ptr<DataArray<float>> m_QuatsPtr;
   float* m_Quats = nullptr;
   std::weak_ptr<DataArray<uint32_t>> m_CrystalStructuresPtr;
   uint32_t* m_CrystalStructures = nullptr;
-  std::weak_ptr<DataArray<float>> m_KernelAverageMisorientationsPtr;
-  float* m_KernelAverageMisorientations = nullptr;
+  std::weak_ptr<DataArray<float>> m_F1Ptr;
+  float* m_F1 = nullptr;
+  std::weak_ptr<DataArray<float>> m_F1sptPtr;
+  float* m_F1spt = nullptr;
+  std::weak_ptr<DataArray<float>> m_F7Ptr;
+  float* m_F7 = nullptr;
+  std::weak_ptr<DataArray<float>> m_mPrimePtr;
+  float* m_mPrime = nullptr;
 
-  DataArrayPath m_FeatureIdsArrayPath = {SIMPL::Defaults::ImageDataContainerName, SIMPL::Defaults::CellAttributeMatrixName, SIMPL::CellData::FeatureIds};
-  DataArrayPath m_CellPhasesArrayPath = {SIMPL::Defaults::ImageDataContainerName, SIMPL::Defaults::CellAttributeMatrixName, SIMPL::CellData::Phases};
-  DataArrayPath m_CrystalStructuresArrayPath = {SIMPL::Defaults::ImageDataContainerName, SIMPL::Defaults::CellEnsembleAttributeMatrixName, SIMPL::EnsembleData::CrystalStructures};
-  DataArrayPath m_QuatsArrayPath = {SIMPL::Defaults::ImageDataContainerName, SIMPL::Defaults::CellAttributeMatrixName, SIMPL::CellData::Quats};
-  QString m_KernelAverageMisorientationsArrayName = {SIMPL::CellData::KernelAverageMisorientations};
-  IntVec3Type m_KernelSize = {};
-  bool m_IgnoreFeatureBoundaries = {};
+  QString m_F1ArrayName = {""};
+  QString m_F1sptArrayName = {""};
+  QString m_F7ArrayName = {""};
+  QString m_mPrimeArrayName = {""};
+  DataArrayPath m_QuatsArrayPath = {"", "", ""};
+  DataArrayPath m_PhasesArrayPath = {"", "", ""};
+  DataArrayPath m_CrystalStructuresArrayPath = {"", "", ""};
+
+  LaueOpsContainer m_OrientationOps;
 
 public:
-  FindKernelAvgMisorientations(const FindKernelAvgMisorientations&) = delete;            // Copy Constructor Not Implemented
-  FindKernelAvgMisorientations(FindKernelAvgMisorientations&&) = delete;                 // Move Constructor Not Implemented
-  FindKernelAvgMisorientations& operator=(const FindKernelAvgMisorientations&) = delete; // Copy Assignment Not Implemented
-  FindKernelAvgMisorientations& operator=(FindKernelAvgMisorientations&&) = delete;      // Move Assignment Not Implemented
+  FindLocalSlipTransmissionMetrics(const FindLocalSlipTransmissionMetrics&) = delete;            // Copy Constructor Not Implemented
+  FindLocalSlipTransmissionMetrics(FindLocalSlipTransmissionMetrics&&) = delete;                 // Move Constructor Not Implemented
+  FindLocalSlipTransmissionMetrics& operator=(const FindLocalSlipTransmissionMetrics&) = delete; // Copy Assignment Not Implemented
+  FindLocalSlipTransmissionMetrics& operator=(FindLocalSlipTransmissionMetrics&&) = delete;      // Move Assignment Not Implemented
 };

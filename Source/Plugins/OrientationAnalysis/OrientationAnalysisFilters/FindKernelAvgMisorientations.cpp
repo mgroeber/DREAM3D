@@ -43,6 +43,7 @@
 #include "SIMPLib/FilterParameters/AbstractFilterParametersReader.h"
 #include "SIMPLib/FilterParameters/DataArraySelectionFilterParameter.h"
 #include "SIMPLib/FilterParameters/IntVec3FilterParameter.h"
+#include "SIMPLib/FilterParameters/LinkedBooleanFilterParameter.h"
 #include "SIMPLib/FilterParameters/LinkedPathCreationFilterParameter.h"
 #include "SIMPLib/FilterParameters/SeparatorFilterParameter.h"
 #include "SIMPLib/FilterParameters/StringFilterParameter.h"
@@ -79,8 +80,12 @@ void FindKernelAvgMisorientations::setupFilterParameters()
 {
   FilterParameterVectorType parameters;
   parameters.push_back(SIMPL_NEW_INT_VEC3_FP("Kernel Radius", KernelSize, FilterParameter::Category::Parameter, FindKernelAvgMisorientations));
-  parameters.push_back(SeparatorFilterParameter::Create("Cell Data", FilterParameter::Category::RequiredArray));
 
+  std::vector<QString> linkedProps = {"FeatureIdsArrayPath"};
+  parameters.push_back(SIMPL_NEW_LINKED_BOOL_FP("Ignore Feature Boundaries", IgnoreFeatureBoundaries, FilterParameter::Category::Parameter, FindKernelAvgMisorientations, linkedProps));
+  linkedProps.clear();
+
+  parameters.push_back(SeparatorFilterParameter::Create("Cell Data", FilterParameter::Category::RequiredArray));
   {
     DataArraySelectionFilterParameter::RequirementType req = DataArraySelectionFilterParameter::CreateRequirement(SIMPL::TypeNames::Int32, 1, AttributeMatrix::Type::Cell, IGeometry::Type::Image);
     parameters.push_back(SIMPL_NEW_DA_SELECTION_FP("Feature Ids", FeatureIdsArrayPath, FilterParameter::Category::RequiredArray, FindKernelAvgMisorientations, req));
@@ -114,6 +119,7 @@ void FindKernelAvgMisorientations::readFilterParameters(AbstractFilterParameters
   setCrystalStructuresArrayPath(reader->readDataArrayPath("CrystalStructuresArrayPath", getCrystalStructuresArrayPath()));
   setCellPhasesArrayPath(reader->readDataArrayPath("CellPhasesArrayPath", getCellPhasesArrayPath()));
   setFeatureIdsArrayPath(reader->readDataArrayPath("FeatureIdsArrayPath", getFeatureIdsArrayPath()));
+  setIgnoreFeatureBoundaries(reader->readValue("IgnoreFeatureBoundaries", getIgnoreFeatureBoundaries()));
   setKernelSize(reader->readIntVec3("KernelSize", getKernelSize()));
   reader->closeFilterGroup();
 }
@@ -134,19 +140,22 @@ void FindKernelAvgMisorientations::dataCheck()
   clearWarningCode();
   DataArrayPath tempPath;
 
-  getDataContainerArray()->getPrereqGeometryFromDataContainer<ImageGeom>(this, getFeatureIdsArrayPath().getDataContainerName());
+  getDataContainerArray()->getPrereqGeometryFromDataContainer<ImageGeom>(this, m_QuatsArrayPath.getDataContainerName());
 
   QVector<DataArrayPath> dataArrayPaths;
 
   std::vector<size_t> cDims(1, 1);
-  m_FeatureIdsPtr = getDataContainerArray()->getPrereqArrayFromPath<DataArray<int32_t>>(this, getFeatureIdsArrayPath(), cDims);
-  if(nullptr != m_FeatureIdsPtr.lock())
+  if(m_IgnoreFeatureBoundaries)
   {
-    m_FeatureIds = m_FeatureIdsPtr.lock()->getPointer(0);
-  } /* Now assign the raw pointer to data from the DataArray<T> object */
-  if(getErrorCode() >= 0)
-  {
-    dataArrayPaths.push_back(getFeatureIdsArrayPath());
+    m_FeatureIdsPtr = getDataContainerArray()->getPrereqArrayFromPath<DataArray<int32_t>>(this, getFeatureIdsArrayPath(), cDims);
+    if(nullptr != m_FeatureIdsPtr.lock())
+    {
+      m_FeatureIds = m_FeatureIdsPtr.lock()->getPointer(0);
+    } /* Now assign the raw pointer to data from the DataArray<T> object */
+    if(getErrorCode() >= 0)
+    {
+      dataArrayPaths.push_back(getFeatureIdsArrayPath());
+    }
   }
 
   m_CellPhasesPtr = getDataContainerArray()->getPrereqArrayFromPath<DataArray<int32_t>>(this, getCellPhasesArrayPath(), cDims);
@@ -159,7 +168,7 @@ void FindKernelAvgMisorientations::dataCheck()
     dataArrayPaths.push_back(getCellPhasesArrayPath());
   }
 
-  tempPath.update(m_FeatureIdsArrayPath.getDataContainerName(), getFeatureIdsArrayPath().getAttributeMatrixName(), getKernelAverageMisorientationsArrayName());
+  tempPath.update(m_QuatsArrayPath.getDataContainerName(), m_QuatsArrayPath.getAttributeMatrixName(), getKernelAverageMisorientationsArrayName());
   m_KernelAverageMisorientationsPtr = getDataContainerArray()->createNonPrereqArrayFromPath<DataArray<float>>(this, tempPath, 0, cDims);
   if(nullptr != m_KernelAverageMisorientationsPtr.lock())
   {
@@ -197,7 +206,7 @@ void FindKernelAvgMisorientations::execute()
     return;
   }
 
-  DataContainer::Pointer m = getDataContainerArray()->getDataContainer(m_FeatureIdsArrayPath.getDataContainerName());
+  DataContainer::Pointer m = getDataContainerArray()->getDataContainer(m_QuatsArrayPath.getDataContainerName());
 
   std::vector<LaueOps::Pointer> m_OrientationOps = LaueOps::GetAllOrientationOps();
   FloatArrayType::Pointer quatPtr = m_QuatsPtr.lock();
@@ -219,14 +228,33 @@ void FindKernelAvgMisorientations::execute()
   int64_t jStride = 0;
   int64_t kStride = 0;
   float* currentQuatPtr = nullptr;
+
+  int64_t totalPoints = xPoints * yPoints * zPoints;
+  int64_t count = 0;
+  int32_t progFeature = 0;
+  int32_t progFeatureInc = static_cast<int32_t>(totalPoints * 0.01f);
+
   for(int64_t col = 0; col < xPoints; col++)
   {
     for(int64_t row = 0; row < yPoints; row++)
     {
       for(int64_t plane = 0; plane < zPoints; plane++)
       {
+        count++;
         point = (plane * xPoints * yPoints) + (row * xPoints) + col;
-        if(m_FeatureIds[point] > 0 && m_CellPhases[point] > 0)
+
+        if(getCancel())
+        {
+          return;
+        }
+        if(static_cast<int32_t>(count) > progFeature + progFeatureInc)
+        {
+          QString ss = QObject::tr("Finding KAMs - %1 of %2").arg(count).arg(totalPoints);
+          notifyStatusMessage(ss);
+          progFeature = count;
+        }
+
+        if(m_CellPhases[point] > 0)
         {
           totalmisorientation = 0.0f;
           numVoxel = 0;
@@ -268,7 +296,7 @@ void FindKernelAvgMisorientations::execute()
                 {
                   good = false;
                 }
-                if(good && m_FeatureIds[point] == m_FeatureIds[neighbor])
+                if(good && (!m_IgnoreFeatureBoundaries || m_FeatureIds[point] == m_FeatureIds[neighbor]))
                 {
                   currentQuatPtr = quatPtr->getTuplePointer(neighbor);
 
@@ -288,7 +316,7 @@ void FindKernelAvgMisorientations::execute()
             m_KernelAverageMisorientations[point] = 0.0f;
           }
         }
-        if(m_FeatureIds[point] == 0 || m_CellPhases[point] == 0)
+        if(m_CellPhases[point] == 0)
         {
           m_KernelAverageMisorientations[point] = 0.0f;
         }
@@ -455,6 +483,18 @@ void FindKernelAvgMisorientations::setKernelAverageMisorientationsArrayName(cons
 QString FindKernelAvgMisorientations::getKernelAverageMisorientationsArrayName() const
 {
   return m_KernelAverageMisorientationsArrayName;
+}
+
+// -----------------------------------------------------------------------------
+void FindKernelAvgMisorientations::setIgnoreFeatureBoundaries(bool value)
+{
+  m_IgnoreFeatureBoundaries = value;
+}
+
+// -----------------------------------------------------------------------------
+bool FindKernelAvgMisorientations::getIgnoreFeatureBoundaries() const
+{
+  return m_IgnoreFeatureBoundaries;
 }
 
 // -----------------------------------------------------------------------------

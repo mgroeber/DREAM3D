@@ -40,6 +40,7 @@ set(_PublicFilters
   FindGBCDMetricBased
   FindGBPDMetricBased
   FindKernelAvgMisorientations
+  FindLocalSlipTransmissionMetrics
   FindMisorientations
   FindSchmids
   FindSlipTransmissionMetrics
