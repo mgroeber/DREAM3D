@@ -39,7 +39,7 @@
 
 #include "SIMPLib/SIMPLib.h"
 #include "SIMPLib/DataArrays/DataArray.hpp"
-#include "SIMPLib/DataArrays/NeighborList.hpp"
+#include "SIMPLib/FilterParameters/FloatVec3FilterParameter.h" 
 #include "SIMPLib/Filtering/AbstractFilter.h"
 
 #include "OrientationAnalysis/OrientationAnalysisDLLExport.h"
@@ -179,6 +179,17 @@ public:
   Q_PROPERTY(DataArrayPath CrystalStructuresArrayPath READ getCrystalStructuresArrayPath WRITE setCrystalStructuresArrayPath)
 
   /**
+   * @brief Setter property for LoadingDirection
+   */
+  void setLoadingDirection(const FloatVec3Type& value);
+  /**
+   * @brief Getter property for LoadingDirection
+   * @return Value of LoadingDirection
+   */
+  FloatVec3Type getLoadingDirection() const;
+  Q_PROPERTY(FloatVec3Type LoadingDirection READ getLoadingDirection WRITE setLoadingDirection)
+
+  /**
    * @brief getCompiledLibraryName Reimplemented from @see AbstractFilter class
    */
   QString getCompiledLibraryName() const override;
@@ -266,6 +277,7 @@ private:
   std::weak_ptr<DataArray<float>> m_mPrimePtr;
   float* m_mPrime = nullptr;
 
+  FloatVec3Type m_LoadingDirection = {};
   QString m_F1ArrayName = {""};
   QString m_F1sptArrayName = {""};
   QString m_F7ArrayName = {""};

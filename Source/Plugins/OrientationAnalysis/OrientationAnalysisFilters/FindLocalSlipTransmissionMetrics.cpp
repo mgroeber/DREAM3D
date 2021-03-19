@@ -40,9 +40,11 @@
 #include "SIMPLib/DataContainers/DataContainerArray.h"
 #include "SIMPLib/FilterParameters/AbstractFilterParametersReader.h"
 #include "SIMPLib/FilterParameters/DataArraySelectionFilterParameter.h"
+#include "SIMPLib/FilterParameters/FloatVec3FilterParameter.h"
 #include "SIMPLib/FilterParameters/LinkedPathCreationFilterParameter.h"
 #include "SIMPLib/FilterParameters/SeparatorFilterParameter.h"
 #include "SIMPLib/FilterParameters/StringFilterParameter.h"
+#include "SIMPLib/Math/MatrixMath.h"
 
 #include "SIMPLib/Geometry/ImageGeom.h"
 
@@ -69,6 +71,9 @@ enum createdPathID : RenameDataPath::DataID_t
 // -----------------------------------------------------------------------------
 FindLocalSlipTransmissionMetrics::FindLocalSlipTransmissionMetrics()
 {
+  m_LoadingDirection[0] = 1.0f;
+  m_LoadingDirection[1] = 1.0f;
+  m_LoadingDirection[2] = 1.0f;
 }
 
 // -----------------------------------------------------------------------------
@@ -82,6 +87,8 @@ FindLocalSlipTransmissionMetrics::~FindLocalSlipTransmissionMetrics() = default;
 void FindLocalSlipTransmissionMetrics::setupFilterParameters()
 {
   FilterParameterVectorType parameters;
+  parameters.push_back(SIMPL_NEW_FLOAT_VEC3_FP("Loading Direction", LoadingDirection, FilterParameter::Category::Parameter, FindLocalSlipTransmissionMetrics));
+
   parameters.push_back(SeparatorFilterParameter::Create("Feature Data", FilterParameter::Category::RequiredArray));
   {
     DataArraySelectionFilterParameter::RequirementType req = DataArraySelectionFilterParameter::CreateRequirement(SIMPL::TypeNames::Float, 4, AttributeMatrix::Type::Cell, IGeometry::Type::Image);
@@ -118,6 +125,7 @@ void FindLocalSlipTransmissionMetrics::readFilterParameters(AbstractFilterParame
   setF1sptArrayName(reader->readString("F1sptArrayName", getF1sptArrayName()));
   setF7ArrayName(reader->readString("F7ArrayName", getF7ArrayName()));
   setmPrimeArrayName(reader->readString("mPrimeArrayName", getmPrimeArrayName()));
+  setLoadingDirection(reader->readFloatVec3("LoadingDirection", getLoadingDirection()));
   reader->closeFilterGroup();
 }
 
@@ -221,6 +229,11 @@ void FindLocalSlipTransmissionMetrics::execute()
 
   double LD[3] = {0.0f, 0.0f, 1.0f};
 
+  LD[0] = m_LoadingDirection[0];
+  LD[1] = m_LoadingDirection[1];
+  LD[2] = m_LoadingDirection[2];
+  MatrixMath::Normalize3x1(LD);
+
   DataContainer::Pointer m = getDataContainerArray()->getDataContainer(m_QuatsArrayPath.getDataContainerName());
   SizeVec3Type udims = m->getGeometryAs<ImageGeom>()->getDimensions();
 
@@ -239,7 +252,7 @@ void FindLocalSlipTransmissionMetrics::execute()
   neighpoints[5] = dims[0] * dims[1];
 
   int32_t progFeature = 0;
-  int32_t progFeatureInc = static_cast<int32_t>(totalElements * 0.001f);
+  int32_t progFeatureInc = static_cast<int32_t>(totalElements * 0.01f);
 
   int64_t column = 0, row = 0, plane = 0;
   int64_t neighpoint = 0;
@@ -248,13 +261,13 @@ void FindLocalSlipTransmissionMetrics::execute()
   float maxF1 = 0.0;
   float maxF1spt = 0.0;
   float maxF7 = 0.0;
-  float maxmPrime = 0.0;
+  float minmPrime = 1.0;
   for(size_t i = 0; i < totalElements; i++)
   {
     maxF1 = 0.0f;
     maxF1spt = 0.0f;
     maxF7 = 0.0f;
-    maxmPrime = 0.0f;
+    minmPrime = 1.0f;
 
     if(getCancel())
     {
@@ -262,7 +275,7 @@ void FindLocalSlipTransmissionMetrics::execute()
     }
     if(static_cast<int32_t>(i) > progFeature + progFeatureInc)
     {
-      QString ss = QObject::tr("Finding Local Slip Transmission Metrics - %1 of %2").arg(i).arg(totalElements);
+      QString ss = QObject::tr("Finding Local Slip Transmission Metrics - %1%").arg(100.0f * float(i)/float(totalElements));
       notifyStatusMessage(ss);
       progFeature = i;
     }
@@ -321,14 +334,14 @@ void FindLocalSlipTransmissionMetrics::execute()
           {
             maxF7 = F7;
           }
-          if(mPrime > maxmPrime)
+          if(mPrime < minmPrime)
           {
-            maxmPrime = mPrime;
+            minmPrime = mPrime;
           }
         }
       }
     }
-    m_mPrime[i] = maxmPrime;
+    m_mPrime[i] = minmPrime;
     m_F1[i] = maxF1;
     m_F1spt[i] = maxF1spt;
     m_F7[i] = maxF7;
@@ -387,7 +400,7 @@ QString FindLocalSlipTransmissionMetrics::getGroupName() const
 // -----------------------------------------------------------------------------
 QUuid FindLocalSlipTransmissionMetrics::getUuid() const
 {
-  return QUuid("{97523038-5fb2-5e82-9177-ed3e8b24b4bd}");
+  return QUuid("{97523038-5fb2-5e82-9177-ed3e8b24b4df}");
 }
 
 // -----------------------------------------------------------------------------
@@ -517,4 +530,16 @@ void FindLocalSlipTransmissionMetrics::setCrystalStructuresArrayPath(const DataA
 DataArrayPath FindLocalSlipTransmissionMetrics::getCrystalStructuresArrayPath() const
 {
   return m_CrystalStructuresArrayPath;
+}
+
+// -----------------------------------------------------------------------------
+void FindLocalSlipTransmissionMetrics::setLoadingDirection(const FloatVec3Type& value)
+{
+  m_LoadingDirection = value;
+}
+
+// -----------------------------------------------------------------------------
+FloatVec3Type FindLocalSlipTransmissionMetrics::getLoadingDirection() const
+{
+  return m_LoadingDirection;
 }
